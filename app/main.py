@@ -140,14 +140,142 @@ def bootstrap_sample_data():
     else:
         print("Database already contains events. Skipping bootstrapper.")
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def read_root():
-    return {
-        "message": "Welcome to the Purplle Store Intelligence API",
-        "docs_url": "/docs",
-        "health_url": "/health",
-        "dashboard_url": "/dashboard"
-    }
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Purplle Store Intelligence API Gateway</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --bg-color: #0b071e;
+                --panel-bg: rgba(25, 18, 48, 0.65);
+                --border-color: rgba(255, 255, 255, 0.1);
+                --text-primary: #ffffff;
+                --text-secondary: #a39cb5;
+                --accent-purplle: #7e22ce;
+                --accent-pink: #ec4899;
+                --accent-cyan: #06b6d4;
+            }
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                font-family: 'Outfit', sans-serif;
+            }
+            body {
+                background-color: var(--bg-color);
+                background-image: radial-gradient(circle at 10% 20%, rgba(126, 34, 206, 0.15) 0%, transparent 40%),
+                                  radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                color: var(--text-primary);
+            }
+            .container {
+                max-width: 600px;
+                width: 100%;
+                text-align: center;
+                background: var(--panel-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 20px;
+                padding: 40px;
+                backdrop-filter: blur(12px);
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            }
+            h1 {
+                font-size: 2.2rem;
+                font-weight: 800;
+                background: linear-gradient(135deg, var(--accent-cyan), var(--accent-pink));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 10px;
+            }
+            .subtitle {
+                font-size: 1rem;
+                color: var(--text-secondary);
+                margin-bottom: 30px;
+            }
+            .links-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .btn {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 18px 25px;
+                border-radius: 12px;
+                text-decoration: none;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                border: 1px solid var(--border-color);
+                background: rgba(255, 255, 255, 0.03);
+            }
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            }
+            .btn-dashboard {
+                border-color: rgba(6, 182, 212, 0.4);
+                color: var(--accent-cyan);
+            }
+            .btn-dashboard:hover {
+                background: rgba(6, 182, 212, 0.1);
+            }
+            .btn-docs {
+                border-color: rgba(236, 72, 153, 0.4);
+                color: var(--accent-pink);
+            }
+            .btn-docs:hover {
+                background: rgba(236, 72, 153, 0.1);
+            }
+            .btn-health {
+                border-color: rgba(126, 34, 206, 0.4);
+                color: #a78bfa;
+            }
+            .btn-health:hover {
+                background: rgba(126, 34, 206, 0.1);
+            }
+            .btn span {
+                color: inherit;
+            }
+            .btn-arrow {
+                font-size: 1.2rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Purplle Store Intelligence</h1>
+            <p class="subtitle">API Gateway & Live Analytics Portal</p>
+            <div class="links-grid">
+                <a href="/dashboard" class="btn btn-dashboard">
+                    <span>📊 Go to Dashboard</span>
+                    <span class="btn-arrow">→</span>
+                </a>
+                <a href="/docs" class="btn btn-docs">
+                    <span>🔌 Interactive API Docs (Swagger)</span>
+                    <span class="btn-arrow">→</span>
+                </a>
+                <a href="/health" class="btn btn-health">
+                    <span>❤️ Service Health Status</span>
+                    <span class="btn-arrow">→</span>
+                </a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def get_dashboard():
