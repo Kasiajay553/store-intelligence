@@ -7,7 +7,7 @@ import os
 import sys
 from pipeline.detect import VideoProcessor, load_store_layout
 
-def process_all_clips(to_api=False):
+def process_all_clips(to_api=False, backend_url="http://localhost:8000"):
     layout = load_store_layout("store_layout.json")
     
     # 1. Store 1 Clips (Mapping store files)
@@ -25,7 +25,7 @@ def process_all_clips(to_api=False):
         for video_file, camera_id in s1_mappings.items():
             video_path = os.path.join(store_1_dir, video_file)
             if os.path.exists(video_path):
-                processor = VideoProcessor(store_id="ST1008", camera_id=camera_id, layout_data=layout)
+                processor = VideoProcessor(store_id="ST1008", camera_id=camera_id, layout_data=layout, backend_url=backend_url)
                 # Run with frame_step=30 (1 frame per second) for fast execution
                 processor.process(video_path, frame_step=30, to_api=to_api)
             else:
@@ -45,11 +45,19 @@ def process_all_clips(to_api=False):
         for video_file, camera_id in s2_mappings.items():
             video_path = os.path.join(store_2_dir, video_file)
             if os.path.exists(video_path):
-                processor = VideoProcessor(store_id="ST1008", camera_id=camera_id, layout_data=layout)
+                processor = VideoProcessor(store_id="ST1008", camera_id=camera_id, layout_data=layout, backend_url=backend_url)
                 processor.process(video_path, frame_step=30, to_api=to_api)
             else:
                 print(f"Clip not found: {video_path}")
 
 if __name__ == "__main__":
     to_api = "--api" in sys.argv
-    process_all_clips(to_api=to_api)
+    
+    # Extract custom backend URL if provided
+    backend_url = "http://localhost:8000"
+    for arg in sys.argv:
+        if arg.startswith("http://") or arg.startswith("https://"):
+            backend_url = arg
+            break
+            
+    process_all_clips(to_api=to_api, backend_url=backend_url)
