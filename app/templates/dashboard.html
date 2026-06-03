@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purplle Store Intelligence Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b071e;
+            --panel-bg: rgba(25, 18, 48, 0.65);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a39cb5;
+            --accent-purplle: #7e22ce;
+            --accent-pink: #ec4899;
+            --accent-cyan: #06b6d4;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 10% 20%, rgba(126, 34, 206, 0.15) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            background: rgba(11, 7, 30, 0.4);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-section h1 {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa, var(--accent-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .logo-section p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .select-input, .date-input {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .select-input:hover, .date-input:hover {
+            border-color: var(--accent-pink);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, var(--accent-purplle), var(--accent-pink));
+            border: none;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-refresh:hover {
+            opacity: 0.9;
+        }
+
+        main {
+            flex: 1;
+            padding: 30px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .fallback-alert {
+            background: rgba(234, 179, 8, 0.15);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            color: #fef08a;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            display: none;
+        }
+
+        .fallback-alert strong {
+            color: #fef08a;
+        }
+
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(236, 72, 153, 0.3);
+        }
+
+        .kpi-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 800;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #ffffff, #d8b4fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .kpi-change {
+            font-size: 12px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .kpi-change.up { color: var(--accent-green); }
+        .kpi-change.down { color: var(--accent-red); }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 380px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        .funnel-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .funnel-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .funnel-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .funnel-meta span {
+            color: var(--text-secondary);
+        }
+
+        .funnel-bar-bg {
+            background: rgba(255, 255, 255, 0.05);
+            height: 25px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .funnel-bar-fill {
+            background: linear-gradient(90deg, var(--accent-purplle), var(--accent-pink));
+            height: 100%;
+            border-radius: 6px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
+
+        .anomaly-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .anomaly-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: background 0.2s ease;
+        }
+
+        .anomaly-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .anomaly-card.severity-high { border-left-color: var(--accent-red); }
+        .anomaly-card.severity-medium { border-left-color: rgba(234, 179, 8, 1); }
+        .anomaly-card.severity-low { border-left-color: var(--accent-cyan); }
+
+        .anomaly-meta {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+
+        .anomaly-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: normal;
+        }
+
+        .anomaly-desc {
+            color: #d1cddb;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <h1>PURPLLE STORE INTELLIGENCE</h1>
+            <p>Real-Time Offline Retail Analytics Suite</p>
+        </div>
+        <div class="controls">
+            <select id="storeSelect" class="select-input">
+                <option value="ST1008">Store ST1008 (CCTV Store 1 & 2)</option>
+                <option value="ST1076">Mumbai Store ST1076 (Demo)</option>
+            </select>
+            <input type="date" id="dateInput" class="date-input" value="2026-03-08">
+            <button class="btn-refresh" onclick="refreshDashboard()">Refresh</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="fallbackAlert" class="fallback-alert">
+            ⚠️ <strong>Data Alignment Notice:</strong> Showing aggregated/fallback historical store data because there are no matching CCTV and POS events on the exact date selected.
+        </div>
+
+        <div class="kpi-container">
+            <div class="kpi-card">
+                <div class="kpi-label">Total Unique Visitors</div>
+                <div class="kpi-value" id="kpi-visitors">-</div>
+                <div class="kpi-change up">▲ 8.2% vs yesterday</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">POS Transactions</div>
+                <div class="kpi-value" id="kpi-transactions">-</div>
+                <div class="kpi-change up">▲ 12.4% vs yesterday</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Store Conversion Rate</div>
+                <div class="kpi-value" id="kpi-conversion">-</div>
+                <div class="kpi-change up">▲ 3.8% vs yesterday</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Average Dwell Time</div>
+                <div class="kpi-value" id="kpi-dwell">-</div>
+                <div class="kpi-change down">▼ 1.2m vs yesterday</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total Revenue</div>
+                <div class="kpi-value" id="kpi-revenue">-</div>
+                <div class="kpi-change up">▲ ₹18,450 vs yesterday</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <!-- Funnel Chart Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Conversion Funnel</div>
+                </div>
+                <div class="funnel-bar-container" id="funnelContainer">
+                    <!-- Dynamic Funnel Rows -->
+                </div>
+            </div>
+
+            <!-- Zone Traffic Chart Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Zone Visits Breakdown</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="zoneTrafficChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Anomaly Feed Panel -->
+            <div class="panel" style="grid-column: span 2;">
+                <div class="panel-header">
+                    <div class="panel-title">Operational Anomalies & Queue Alerts</div>
+                </div>
+                <div class="anomaly-feed" id="anomalyFeed">
+                    <!-- Dynamic Anomalies -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let zoneChartInstance = null;
+
+        async function fetchAPI(endpoint, storeId, date) {
+            try {
+                const response = await fetch(`/stores/${storeId}/${endpoint}?date=${date}`);
+                if (!response.ok) throw new Error("API call failed");
+                return await response.json();
+            } catch (err) {
+                console.error(`Error loading ${endpoint}:`, err);
+                return null;
+            }
+        }
+
+        async function refreshDashboard() {
+            const storeId = document.getElementById("storeSelect").value;
+            const date = document.getElementById("dateInput").value;
+
+            // Load all endpoints
+            const metrics = await fetchAPI("metrics", storeId, date);
+            const funnel = await fetchAPI("funnel", storeId, date);
+            const anomalies = await fetchAPI("anomalies", storeId, date);
+
+            if (!metrics) {
+                console.warn("Failed to fetch dashboard data. Make sure the FastAPI server is running.");
+                return;
+            }
+
+            // Update KPIs
+            document.getElementById("kpi-visitors").innerText = metrics.total_visitors.toLocaleString();
+            document.getElementById("kpi-transactions").innerText = metrics.total_transactions.toLocaleString();
+            document.getElementById("kpi-conversion").innerText = `${metrics.conversion_rate_percentage}%`;
+            document.getElementById("kpi-dwell").innerText = `${metrics.average_dwell_minutes}m`;
+            document.getElementById("kpi-revenue").innerText = `₹${metrics.total_revenue.toLocaleString()}`;
+
+            // Show date mismatch fallback notice
+            const fallbackAlert = document.getElementById("fallbackAlert");
+            if (metrics.using_fallback_aggregates) {
+                fallbackAlert.style.display = "block";
+            } else {
+                fallbackAlert.style.display = "none";
+            }
+
+            // Update Funnel Chart
+            const funnelContainer = document.getElementById("funnelContainer");
+            funnelContainer.innerHTML = "";
+            if (funnel && funnel.stages) {
+                funnel.stages.forEach(stage => {
+                    const row = document.createElement("div");
+                    row.className = "funnel-row";
+                    row.innerHTML = `
+                        <div class="funnel-meta">
+                            <span>${stage.stage.replace(/_/g, " ")}</span>
+                            <strong>${stage.count} (${stage.percentage}%)</strong>
+                        </div>
+                        <div class="funnel-bar-bg">
+                            <div class="funnel-bar-fill" style="width: ${stage.percentage}%"></div>
+                        </div>
+                    `;
+                    funnelContainer.appendChild(row);
+                });
+            }
+
+            // Update Zone Traffic Chart
+            const zoneLabels = Object.keys(metrics.zone_traffic);
+            const zoneData = Object.values(metrics.zone_traffic);
+
+            if (zoneChartInstance) {
+                zoneChartInstance.destroy();
+            }
+
+            const ctx = document.getElementById("zoneTrafficChart").getContext("2d");
+            zoneChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: zoneLabels,
+                    datasets: [{
+                        label: 'Unique Visitors',
+                        data: zoneData,
+                        backgroundColor: [
+                            'rgba(126, 34, 206, 0.65)',
+                            'rgba(236, 72, 153, 0.65)',
+                            'rgba(6, 182, 212, 0.65)',
+                            'rgba(16, 185, 129, 0.65)'
+                        ],
+                        borderColor: [
+                            '#7e22ce',
+                            '#ec4899',
+                            '#06b6d4',
+                            '#10b981'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#a39cb5' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#a39cb5' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Update Anomalies
+            const anomalyFeed = document.getElementById("anomalyFeed");
+            anomalyFeed.innerHTML = "";
+            if (anomalies && anomalies.anomalies && anomalies.anomalies.length > 0) {
+                anomalies.anomalies.forEach(anomaly => {
+                    const card = document.createElement("div");
+                    card.className = `anomaly-card severity-${anomaly.severity.toLowerCase()}`;
+                    
+                    // Style by severity
+                    let sevColor = 'var(--accent-cyan)';
+                    if (anomaly.severity === 'CRITICAL') sevColor = 'var(--accent-red)';
+                    else if (anomaly.severity === 'WARN') sevColor = '#ea9f08';
+                    
+                    card.innerHTML = `
+                        <div class="anomaly-meta">
+                            <span style="color: ${sevColor}">
+                                [${anomaly.severity}] ${anomaly.anomaly_type}
+                            </span>
+                            <span class="anomaly-time">${anomaly.timestamp.replace("T", " ").substring(0, 19)}</span>
+                        </div>
+                        <div class="anomaly-desc">${anomaly.details}</div>
+                        <div style="font-size: 11px; margin-top: 5px; color: #a78bfa;">💡 Suggested Action: ${anomaly.suggested_action}</div>
+                    `;
+                    anomalyFeed.appendChild(card);
+                });
+            } else {
+                anomalyFeed.innerHTML = "<p style='color: var(--text-secondary); text-align: center; padding: 20px;'>No operational anomalies detected for this store and date.</p>";
+            }
+        }
+
+        // Initial Load
+        window.addEventListener("load", () => {
+            refreshDashboard();
+            // Automatically poll APIs every 5 seconds to show simulated real-time updates
+            setInterval(refreshDashboard, 5000);
+        });
+    </script>
+</body>
+</html>

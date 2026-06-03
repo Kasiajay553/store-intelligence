@@ -1,0 +1,91 @@
+{
+  "stores": {
+    "ST1076": {
+      "store_name": "Mumbai Store 1076",
+      "operating_hours": {
+        "open": "09:00:00",
+        "close": "22:00:00"
+      },
+      "cameras": {
+        "cam1": "ENTRY_EXIT",
+        "CAM2": "ZONE_LEFT_SHELF",
+        "CAM3": "ZONE_CENTER_DISPLAY",
+        "CAM4": "ZONE_LIPSTICK_AISLE",
+        "PURPLLE_MUM_1076_CAM6": "BILLING_QUEUE"
+      },
+      "zones": [
+        {
+          "zone_id": "PURPLLE_MUM_1076_Z01",
+          "zone_name": "Left Shelf",
+          "zone_type": "SHELF",
+          "is_revenue_zone": "Yes",
+          "camera_id": "CAM2",
+          "polygon": [[100, 100], [400, 100], [400, 500], [100, 500]]
+        },
+        {
+          "zone_id": "PURPLLE_MUM_1076_Z02",
+          "zone_name": "Center Display",
+          "zone_type": "DISPLAY",
+          "is_revenue_zone": "Yes",
+          "camera_id": "CAM3",
+          "polygon": [[200, 200], [500, 200], [500, 450], [200, 450]]
+        },
+        {
+          "zone_id": "PURPLLE_MUM_1076_Z03",
+          "zone_name": "Lipstick Aisle",
+          "zone_type": "SHELF",
+          "is_revenue_zone": "Yes",
+          "camera_id": "CAM4",
+          "polygon": [[150, 150], [600, 150], [600, 300], [150, 300]]
+        },
+        {
+          "zone_id": "PURPLLE_MUM_1076_Z_BILLING_01",
+          "zone_name": "Billing Counter Queue",
+          "zone_type": "BILLING",
+          "is_revenue_zone": "Yes",
+          "camera_id": "PURPLLE_MUM_1076_CAM6",
+          "polygon": [[500, 100], [800, 100], [800, 400], [500, 400]]
+        }
+      ]
+    },
+    "ST1008": {
+      "store_name": "Store 1008 (CCTV Store 1 & 2)",
+      "operating_hours": {
+        "open": "09:00:00",
+        "close": "22:00:00"
+      },
+      "cameras": {
+        "CAM3": "ENTRY_EXIT",
+        "CAM1": "ZONE_LEFT_SHELF",
+        "CAM2": "ZONE_CENTER_DISPLAY",
+        "CAM5": "BILLING_QUEUE"
+      },
+      "zones": [
+        {
+          "zone_id": "PURPLLE_ST1008_Z01",
+          "zone_name": "Left Shelf",
+          "zone_type": "SHELF",
+          "is_revenue_zone": "Yes",
+          "camera_id": "CAM1",
+          "polygon": [[100, 100], [400, 100], [400, 500], [100, 500]]
+        },
+        {
+          "zone_id": "PURPLLE_ST1008_Z02",
+          "zone_name": "Center Display",
+          "zone_type": "DISPLAY",
+          "is_revenue_zone": "Yes",
+          "camera_id": "CAM2",
+          "polygon": [[200, 200], [500, 200], [500, 450], [200, 450]]
+        },
+        {
+          "zone_id": "PURPLLE_ST1008_Z_BILLING_01",
+          "zone_name": "Billing Counter Queue",
+          "zone_type": "BILLING",
+          "is_revenue_zone": "Yes",
+          "camera_id": "CAM5",
+          "polygon": [[500, 100], [800, 100], [800, 400], [500, 400]]
+        }
+      ]
+    }
+  }
+}

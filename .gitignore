@@ -1,0 +1,23 @@
+# Virtual Environment
+venv/
+.venv/
+
+# CCTV Video Clips
+cctv_clips/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local databases & logs
+*.db
+server_output.txt
+pipeline_output.txt
+emitted_events.jsonl
+
+# IDE configurations
+.vscode/
+*.code-workspace
