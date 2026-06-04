@@ -16,7 +16,6 @@ __pycache__/
 *.db
 server_output.txt
 pipeline_output.txt
-emitted_events.jsonl
 
 # IDE configurations
 .vscode/

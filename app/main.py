@@ -114,10 +114,13 @@ def general_exception_handler(request: Request, exc: Exception):
 def bootstrap_sample_data():
     """Bootstraps the database with sample events if empty."""
     events_file = None
-    for file in os.listdir("."):
-        if file.startswith("sample_events") and file.endswith(".jsonl"):
-            events_file = file
-            break
+    if os.path.exists("emitted_events.jsonl"):
+        events_file = "emitted_events.jsonl"
+    else:
+        for file in os.listdir("."):
+            if file.startswith("sample_events") and file.endswith(".jsonl"):
+                events_file = file
+                break
 
     if not events_file:
         print("Sample events JSONL file not found for bootstrapping.")
