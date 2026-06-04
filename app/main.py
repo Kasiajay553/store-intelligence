@@ -113,20 +113,7 @@ def general_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def bootstrap_sample_data():
     """Bootstraps the database with sample events if empty."""
-    events_file = None
-    if os.path.exists("emitted_events.jsonl"):
-        events_file = "emitted_events.jsonl"
-    else:
-        for file in os.listdir("."):
-            if file.startswith("sample_events") and file.endswith(".jsonl"):
-                events_file = file
-                break
-
-    if not events_file:
-        print("Sample events JSONL file not found for bootstrapping.")
-        return
-
-    # Ingest if empty
+    # Check if empty
     conn = sqlite3.connect("store_intelligence.db")
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM events")
@@ -134,11 +121,26 @@ def bootstrap_sample_data():
     conn.close()
 
     if count == 0:
-        print(f"Bootstrapping database with events from {events_file}...")
-        with open(events_file, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    ingestion_engine.ingest_raw_json(line)
+        jsonl_files = []
+        if os.path.exists("emitted_events.jsonl"):
+            jsonl_files.append("emitted_events.jsonl")
+        for file in os.listdir("."):
+            if file.startswith("sample_events") and file.endswith(".jsonl"):
+                jsonl_files.append(file)
+        
+        # Deduplicate
+        jsonl_files = list(set(jsonl_files))
+        
+        if not jsonl_files:
+            print("No event files found for bootstrapping.")
+            return
+
+        for events_file in jsonl_files:
+            print(f"Bootstrapping database with events from {events_file}...")
+            with open(events_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        ingestion_engine.ingest_raw_json(line)
         print("Bootstrapping complete.")
     else:
         print("Database already contains events. Skipping bootstrapper.")
