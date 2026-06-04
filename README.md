@@ -95,10 +95,10 @@ For compatibility with legacy testing suites, the API also registers fallback ro
 
 ## 💡 Core Design Decisions & Architecture
 
-Detailed project blueprints and trade-off rationales are documented in the root directory:
+Detailed project blueprints and trade-off rationales are documented in the `docs/` directory:
 
-* **[DESIGN.md](DESIGN.md)**: Deep dive into the system's end-to-end data flow, YOLOv8 post-processing coordinates, track ID smoothing, and metrics engine equations.
-* **[CHOICES.md](CHOICES.md)**: Complete reasoning and trade-offs for 3 core engineering decisions:
+* **[DESIGN.md](docs/DESIGN.md)**: Deep dive into the system's end-to-end data flow, YOLOv8 post-processing coordinates, track ID smoothing, and metrics engine equations.
+* **[CHOICES.md](docs/CHOICES.md)**: Complete reasoning and trade-offs for 3 core engineering decisions:
   1. *YOLOv8 + Custom Centroid/IoU Tracker* over compilation-heavy frameworks like ByteTrack/DeepSORT.
   2. *SQLite with UNIQUE database-level constraints* for zero-config relational stream deduplication.
   3. *Fuzzy Date Fallback Logic* to handle mismatched transaction and camera event timelines in mock datasets.
@@ -210,8 +210,9 @@ python tests/assertions.py
 
 ```
 purplle/ (Root)
-├── DESIGN.md              # System architecture + AI post-processing decisions
-├── CHOICES.md             # Rationale for 3 core engineering decisions
+├── docs/
+│   ├── DESIGN.md          # System architecture + AI post-processing decisions
+│   └── CHOICES.md         # Rationale for 3 core engineering decisions
 ├── pipeline/
 │   ├── __init__.py        # Package initializer
 │   ├── detect.py          # YOLOv8 person detection and zone polygon mapper
