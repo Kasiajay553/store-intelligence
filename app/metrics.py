@@ -55,25 +55,54 @@ class MetricsEngine:
         revenue = round(tx_result[1] or 0.0, 2)
 
         # Compute global average dwell time (in minutes, excluding staff)
-        # We look at the difference between max and min timestamp for each visitor_id
+        # We group events chronologically by visitor_id to detect distinct visits
         cursor.execute(f"""
-            SELECT visitor_id, MIN(timestamp), MAX(timestamp)
+            SELECT visitor_id, timestamp, event_type, camera_id, zone_id, dwell_ms
             FROM events
             WHERE {event_filter}
-            GROUP BY visitor_id
+            ORDER BY visitor_id, timestamp
         """, params)
         
-        dwell_times = []
+        events_by_visitor = {}
         for row in cursor.fetchall():
-            try:
-                min_t = datetime.fromisoformat(row[1])
-                max_t = datetime.fromisoformat(row[2])
-                diff_seconds = (max_t - min_t).total_seconds()
-                # Include only positive dwells (a single event returns 0)
-                if diff_seconds > 0:
-                    dwell_times.append(diff_seconds)
-            except:
-                continue
+            vid = row[0]
+            events_by_visitor.setdefault(vid, []).append({
+                "timestamp": datetime.fromisoformat(row[1]),
+                "event_type": row[2],
+                "camera_id": row[3],
+                "zone_id": row[4],
+                "dwell_ms": row[5] or 0
+            })
+            
+        dwell_times = []
+        for vid, evs in events_by_visitor.items():
+            current_visit = []
+            visits = []
+            for ev in evs:
+                if not current_visit:
+                    current_visit.append(ev)
+                else:
+                    last_ev = current_visit[-1]
+                    gap = (ev["timestamp"] - last_ev["timestamp"]).total_seconds()
+                    # Split if gap > 15 minutes (900 seconds) OR if the last event was an explicit EXIT
+                    is_exit = last_ev["event_type"] in ("EXIT", "exit") or (last_ev["event_type"] in ("ZONE_EXIT", "zone_exited") and last_ev["zone_id"] == "ENTRANCE")
+                    if gap > 900 or is_exit:
+                        visits.append(current_visit)
+                        current_visit = [ev]
+                    else:
+                        current_visit.append(ev)
+            if current_visit:
+                visits.append(current_visit)
+                
+            for visit in visits:
+                if len(visit) > 1:
+                    v_dwell = (visit[-1]["timestamp"] - visit[0]["timestamp"]).total_seconds()
+                    if v_dwell > 0:
+                        dwell_times.append(v_dwell)
+                elif len(visit) == 1:
+                    v_dwell = visit[0]["dwell_ms"] / 1000.0
+                    if v_dwell > 0:
+                        dwell_times.append(v_dwell)
 
         avg_dwell_minutes = round((sum(dwell_times) / len(dwell_times) / 60.0) if dwell_times else 0.0, 1)
 

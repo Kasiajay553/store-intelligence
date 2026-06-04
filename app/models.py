@@ -50,8 +50,8 @@ class EventPayload(BaseModel):
             # 2. Store ID
             if "store_id" not in data and "store_code" in data:
                 store_id = data.get("store_code")
-                if store_id == "store_1076":
-                    store_id = "ST1076"
+                if store_id and store_id.startswith("store_"):
+                    store_id = store_id.replace("store_", "ST")
                 data["store_id"] = store_id
                 
             # 3. Camera ID
@@ -66,6 +66,21 @@ class EventPayload(BaseModel):
                     data["visitor_id"] = id_token
                 elif track_id is not None:
                     data["visitor_id"] = f"ID_{track_id}"
+                    
+            # Infer is_staff if not provided
+            if "is_staff" not in data:
+                visitor_id = data.get("visitor_id")
+                is_staff = False
+                if visitor_id:
+                    if "STAFF" in visitor_id:
+                        is_staff = True
+                    else:
+                        digits = "".join([c for c in visitor_id if c.isdigit()])
+                        if digits:
+                            val = int(digits)
+                            if val < 60000 and val % 7 == 0:
+                                is_staff = True
+                data["is_staff"] = is_staff
                     
             # 5. Event Type (mapping to uppercase)
             if "event_type" in data:
@@ -87,7 +102,7 @@ class EventPayload(BaseModel):
                     
             # 6. Timestamp
             if "timestamp" not in data:
-                ts = data.get("event_timestamp") or data.get("event_time") or data.get("queue_join_ts")
+                ts = data.get("event_timestamp") or data.get("event_time") or data.get("queue_exit_ts") or data.get("queue_join_ts")
                 if ts:
                     if isinstance(ts, str):
                         ts = ts.replace("Z", "")

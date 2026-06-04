@@ -16,7 +16,7 @@ class EventEmitter:
         """
         Emits an event either to the FastAPI backend or logs it locally.
         """
-        print(f"Emitting event: {event_data['event_type']} for visitor {event_data.get('visitor_id')}")
+        print(f"Emitting event: {event_data.get('event_type')} for visitor {event_data.get('visitor_id') or event_data.get('id_token') or event_data.get('track_id')}")
         if to_api:
             try:
                 # Post to the batch endpoint as a list containing the single event

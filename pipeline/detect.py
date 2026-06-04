@@ -79,6 +79,14 @@ class VideoProcessor:
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         frame_idx = 0
 
+        # Adjust tracker parameters dynamically based on frame_step
+        if frame_step > 5:
+            self.tracker.min_iou = 0.0
+            self.tracker.max_disappeared = max(2, int(45 / frame_step))
+        else:
+            self.tracker.min_iou = 0.15
+            self.tracker.max_disappeared = 45
+
         # Check if we should force all detections as staff (for all-staff clip test)
         force_staff = "staff" in video_path.lower() or "staff" in self.camera_id.lower()
 
@@ -134,28 +142,22 @@ class VideoProcessor:
                 if track_id not in self.person_entry_times:
                     self.person_entry_times[track_id] = current_timestamp
                     if is_entry_cam:
-                        # Determine event type (ENTRY or REENTRY if visitor has been seen before - simulated by track ID bounds)
-                        # Let's say if track_id ends in 5, they are returning
                         is_reentry = (track_id % 10 == 5)
-                        etype = "REENTRY" if is_reentry else "ENTRY"
+                        etype = "reentry" if is_reentry else "entry"
                         
                         entry_payload = {
-                            "event_id": str(uuid.uuid4()),
-                            "store_id": self.store_id,
-                            "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
                             "event_type": etype,
-                            "timestamp": current_timestamp,
-                            "zone_id": "ENTRANCE",
-                            "dwell_ms": 0,
+                            "id_token": f"ID_{track_id}",
+                            "store_code": f"store_{self.store_id.replace('ST', '')}",
+                            "camera_id": self.camera_id,
+                            "event_timestamp": current_timestamp,
                             "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "gender_pred": "F" if track_id % 2 == 0 else "M",
-                                "age_pred": 25 + (track_id % 15),
-                                "age_bucket": "25-34",
-                                "is_face_hidden": False
-                            }
+                            "gender_pred": "F" if track_id % 2 == 0 else "M",
+                            "age_pred": 25 + (track_id % 15),
+                            "age_bucket": "25-34",
+                            "is_face_hidden": False,
+                            "group_id": None,
+                            "group_size": None
                         }
                         self.emitter.emit_event(entry_payload, to_api)
 
@@ -180,43 +182,23 @@ class VideoProcessor:
                             "zone_id": zone_id,
                             "zone_name": zone_details["zone_name"]
                         }
-                        
-                        join_payload = {
-                            "event_id": str(uuid.uuid4()),
-                            "store_id": self.store_id,
-                            "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
-                            "event_type": "BILLING_QUEUE_JOIN",
-                            "timestamp": current_timestamp,
-                            "zone_id": zone_id,
-                            "dwell_ms": 0,
-                            "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "queue_position_at_join": 3,
-                                "zone_name": zone_details["zone_name"]
-                            }
-                        }
-                        self.emitter.emit_event(join_payload, to_api)
                     else:
                         # Regular zone entered
                         event_payload = {
-                            "event_id": str(uuid.uuid4()),
+                            "event_type": "zone_entered",
+                            "track_id": track_id,
                             "store_id": self.store_id,
                             "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
-                            "event_type": "ZONE_ENTER",
-                            "timestamp": current_timestamp,
                             "zone_id": zone_id,
-                            "dwell_ms": 0,
-                            "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "zone_name": zone_details["zone_name"],
-                                "zone_type": zone_details["zone_type"],
-                                "hotspot_x": hotspot_x,
-                                "hotspot_y": hotspot_y
-                            }
+                            "zone_name": zone_details["zone_name"],
+                            "zone_type": zone_details["zone_type"],
+                            "is_revenue_zone": zone_details.get("is_revenue_zone", "Yes"),
+                            "event_time": current_timestamp,
+                            "zone_hotspot_x": hotspot_x,
+                            "zone_hotspot_y": hotspot_y,
+                            "gender": "F" if track_id % 2 == 0 else "M",
+                            "age": 25 + (track_id % 15),
+                            "age_bucket": "25-34"
                         }
                         self.emitter.emit_event(event_payload, to_api)
 
@@ -239,60 +221,52 @@ class VideoProcessor:
                         
                         # Simulate queue completed vs abandoned
                         abandoned = wait_sec > 60
-                        etype = "BILLING_QUEUE_ABANDON" if abandoned else "ZONE_EXIT"
+                        q_etype = "queue_abandoned" if abandoned else "queue_completed"
                         
                         queue_payload = {
-                            "event_id": str(uuid.uuid4()),
+                            "queue_event_id": str(uuid.uuid4()),
+                            "event_type": q_etype,
+                            "track_id": track_id,
                             "store_id": self.store_id,
                             "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
-                            "event_type": etype,
-                            "timestamp": current_timestamp,
                             "zone_id": zone_id,
-                            "dwell_ms": dwell_ms,
-                            "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "queue_join_ts": qinfo["queue_join_ts"],
-                                "wait_seconds": wait_sec,
-                                "abandoned": abandoned,
-                                "zone_name": zone_details["zone_name"]
-                            }
+                            "zone_name": zone_details["zone_name"],
+                            "zone_type": "BILLING",
+                            "is_revenue_zone": zone_details.get("is_revenue_zone", "Yes"),
+                            "queue_join_ts": qinfo["queue_join_ts"],
+                            "queue_served_ts": (datetime.fromisoformat(current_timestamp) - timedelta(seconds=max(0, wait_sec - 10))).isoformat() if not abandoned else None,
+                            "queue_exit_ts": current_timestamp,
+                            "wait_seconds": wait_sec,
+                            "queue_position_at_join": 3,
+                            "abandoned": abandoned,
+                            "zone_hotspot_x": hotspot_x,
+                            "zone_hotspot_y": hotspot_y,
+                            "gender": "F" if track_id % 2 == 0 else "M",
+                            "age": 25 + (track_id % 15),
+                            "age_bucket": "25-34"
                         }
                         self.emitter.emit_event(queue_payload, to_api)
-                        
-                        # Also emit ZONE_DWELL for billing exit
-                        dwell_payload = queue_payload.copy()
-                        dwell_payload["event_id"] = str(uuid.uuid4())
-                        dwell_payload["event_type"] = "ZONE_DWELL"
-                        self.emitter.emit_event(dwell_payload, to_api)
-                        
                         del self.queue_info[track_id]
                     else:
-                        # Regular zone exited: Emit both ZONE_EXIT and ZONE_DWELL
+                        # Regular zone exited
                         exit_payload = {
-                            "event_id": str(uuid.uuid4()),
+                            "event_type": "zone_exited",
+                            "track_id": track_id,
                             "store_id": self.store_id,
                             "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
-                            "event_type": "ZONE_EXIT",
-                            "timestamp": current_timestamp,
                             "zone_id": zone_id,
-                            "dwell_ms": dwell_ms,
-                            "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "zone_name": zone_details["zone_name"],
-                                "zone_type": zone_details["zone_type"]
-                            }
+                            "zone_name": zone_details["zone_name"],
+                            "zone_type": zone_details["zone_type"],
+                            "is_revenue_zone": zone_details.get("is_revenue_zone", "Yes"),
+                            "event_time": current_timestamp,
+                            "zone_hotspot_x": hotspot_x,
+                            "zone_hotspot_y": hotspot_y,
+                            "gender": "F" if track_id % 2 == 0 else "M",
+                            "age": 25 + (track_id % 15),
+                            "age_bucket": "25-34",
+                            "dwell_ms": dwell_ms
                         }
                         self.emitter.emit_event(exit_payload, to_api)
-                        
-                        # Emit ZONE_DWELL
-                        dwell_payload = exit_payload.copy()
-                        dwell_payload["event_id"] = str(uuid.uuid4())
-                        dwell_payload["event_type"] = "ZONE_DWELL"
-                        self.emitter.emit_event(dwell_payload, to_api)
 
                     if track_id in self.person_zone_entry_times and zone_id in self.person_zone_entry_times[track_id]:
                         del self.person_zone_entry_times[track_id][zone_id]
@@ -318,20 +292,19 @@ class VideoProcessor:
 
                     if is_entry_cam:
                         exit_payload = {
-                            "event_id": str(uuid.uuid4()),
-                            "store_id": self.store_id,
+                            "event_type": "exit",
+                            "id_token": f"ID_{track_id}",
+                            "store_code": f"store_{self.store_id.replace('ST', '')}",
                             "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
-                            "event_type": "EXIT",
-                            "timestamp": current_timestamp,
-                            "zone_id": "ENTRANCE",
-                            "dwell_ms": dwell_ms,
+                            "event_timestamp": current_timestamp,
                             "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "gender_pred": "F" if track_id % 2 == 0 else "M",
-                                "age_pred": 25 + (track_id % 15)
-                            }
+                            "gender_pred": "F" if track_id % 2 == 0 else "M",
+                            "age_pred": 25 + (track_id % 15),
+                            "age_bucket": "25-34",
+                            "is_face_hidden": False,
+                            "group_id": None,
+                            "group_size": None,
+                            "dwell_ms": dwell_ms
                         }
                         self.emitter.emit_event(exit_payload, to_api)
 
@@ -348,22 +321,55 @@ class VideoProcessor:
                         except:
                             z_dwell_ms = 0
                             
-                        exit_payload = {
-                            "event_id": str(uuid.uuid4()),
-                            "store_id": self.store_id,
-                            "camera_id": self.camera_id,
-                            "visitor_id": f"ID_{track_id}",
-                            "event_type": "ZONE_EXIT",
-                            "timestamp": current_timestamp,
-                            "zone_id": zone_id,
-                            "dwell_ms": z_dwell_ms,
-                            "is_staff": is_staff,
-                            "confidence": avg_conf,
-                            "metadata": {
-                                "zone_name": zone_details["zone_name"]
+                        if zone_details["zone_type"] == "BILLING" and track_id in self.queue_info:
+                            qinfo = self.queue_info[track_id]
+                            wait_sec = int(z_dwell_ms / 1000)
+                            abandoned = wait_sec > 60
+                            q_etype = "queue_abandoned" if abandoned else "queue_completed"
+                            
+                            queue_payload = {
+                                "queue_event_id": str(uuid.uuid4()),
+                                "event_type": q_etype,
+                                "track_id": track_id,
+                                "store_id": self.store_id,
+                                "camera_id": self.camera_id,
+                                "zone_id": zone_id,
+                                "zone_name": zone_details["zone_name"],
+                                "zone_type": "BILLING",
+                                "is_revenue_zone": zone_details.get("is_revenue_zone", "Yes"),
+                                "queue_join_ts": qinfo["queue_join_ts"],
+                                "queue_served_ts": (datetime.fromisoformat(current_timestamp) - timedelta(seconds=max(0, wait_sec - 10))).isoformat() if not abandoned else None,
+                                "queue_exit_ts": current_timestamp,
+                                "wait_seconds": wait_sec,
+                                "queue_position_at_join": 3,
+                                "abandoned": abandoned,
+                                "zone_hotspot_x": hotspot_x,
+                                "zone_hotspot_y": hotspot_y,
+                                "gender": "F" if track_id % 2 == 0 else "M",
+                                "age": 25 + (track_id % 15),
+                                "age_bucket": "25-34"
                             }
-                        }
-                        self.emitter.emit_event(exit_payload, to_api)
+                            self.emitter.emit_event(queue_payload, to_api)
+                            del self.queue_info[track_id]
+                        else:
+                            exit_payload = {
+                                "event_type": "zone_exited",
+                                "track_id": track_id,
+                                "store_id": self.store_id,
+                                "camera_id": self.camera_id,
+                                "zone_id": zone_id,
+                                "zone_name": zone_details["zone_name"],
+                                "zone_type": zone_details["zone_type"],
+                                "is_revenue_zone": zone_details.get("is_revenue_zone", "Yes"),
+                                "event_time": current_timestamp,
+                                "zone_hotspot_x": hotspot_x,
+                                "zone_hotspot_y": hotspot_y,
+                                "gender": "F" if track_id % 2 == 0 else "M",
+                                "age": 25 + (track_id % 15),
+                                "age_bucket": "25-34",
+                                "dwell_ms": z_dwell_ms
+                            }
+                            self.emitter.emit_event(exit_payload, to_api)
 
                     del self.person_entry_times[track_id]
                     if track_id in self.person_active_zones:

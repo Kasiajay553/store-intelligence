@@ -174,6 +174,20 @@ class IngestionEngine:
                 confidence = event.confidence if event.confidence is not None else 1.0
                 metadata_str = json.dumps(event.metadata or {})
                 
+                # If this is a legacy queue event, synthesize a BILLING_QUEUE_JOIN
+                raw_etype = str(event_data.get("event_type", "")).upper()
+                if raw_etype in ("QUEUE_COMPLETED", "QUEUE_ABANDONED"):
+                    join_time = event_data.get("queue_join_ts")
+                    if join_time:
+                        import hashlib
+                        join_uid = hashlib.md5(f"JOIN_{visitor_id}_{join_time}".encode()).hexdigest()
+                        join_meta = json.dumps({"queue_position_at_join": event_data.get("queue_position_at_join", 3)})
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO events 
+                            (event_id, store_id, camera_id, visitor_id, event_type, timestamp, zone_id, dwell_ms, is_staff, confidence, metadata)
+                            VALUES (?, ?, ?, ?, 'BILLING_QUEUE_JOIN', ?, ?, 0, ?, ?, ?)
+                        """, (join_uid, store_id, camera_id, visitor_id, join_time, zone_id, is_staff, confidence, join_meta))
+
                 cursor.execute("""
                     INSERT OR IGNORE INTO events 
                     (event_id, store_id, camera_id, visitor_id, event_type, timestamp, zone_id, dwell_ms, is_staff, confidence, metadata)
@@ -258,7 +272,7 @@ class IngestionEngine:
                 mapped_data["event_type"] = etype
                 
             # 6. Timestamp mapping
-            ts_str = data.get("timestamp") or data.get("event_time") or data.get("event_timestamp") or data.get("queue_join_ts") or datetime.now().isoformat()
+            ts_str = data.get("timestamp") or data.get("event_time") or data.get("event_timestamp") or data.get("queue_exit_ts") or data.get("queue_join_ts") or datetime.now().isoformat()
             if isinstance(ts_str, str):
                 ts_str = ts_str.replace("Z", "")
             mapped_data["timestamp"] = ts_str
