@@ -234,8 +234,8 @@ class IngestionEngine:
                 
             # 2. Store ID
             store_id = data.get("store_id") or data.get("store_code") or "ST1008"
-            if store_id == "store_1076":
-                store_id = "ST1076"
+            if isinstance(store_id, str) and store_id.startswith("store_"):
+                store_id = store_id.replace("store_", "ST")
             mapped_data["store_id"] = store_id
             
             # 3. Camera ID
