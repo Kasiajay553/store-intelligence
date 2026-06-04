@@ -67,7 +67,7 @@
           "zone_type": "SHELF",
           "is_revenue_zone": "Yes",
           "camera_id": "CAM1",
-          "polygon": [[100, 100], [400, 100], [400, 500], [100, 500]]
+          "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]
         },
         {
           "zone_id": "PURPLLE_ST1008_Z02",
@@ -75,7 +75,7 @@
           "zone_type": "DISPLAY",
           "is_revenue_zone": "Yes",
           "camera_id": "CAM2",
-          "polygon": [[200, 200], [500, 200], [500, 450], [200, 450]]
+          "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]
         },
         {
           "zone_id": "PURPLLE_ST1008_Z_BILLING_01",
@@ -83,7 +83,7 @@
           "zone_type": "BILLING",
           "is_revenue_zone": "Yes",
           "camera_id": "CAM5",
-          "polygon": [[500, 100], [800, 100], [800, 400], [500, 400]]
+          "polygon": [[0, 0], [1920, 0], [1920, 1080], [0, 1080]]
         }
       ]
     }
