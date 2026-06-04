@@ -291,7 +291,8 @@ class IngestionEngine:
             mapped_data["dwell_ms"] = dwell
             
             # 9. Is Staff
-            mapped_data["is_staff"] = data.get("is_staff", False)
+            if "is_staff" in data:
+                mapped_data["is_staff"] = data["is_staff"]
             
             # 10. Confidence
             mapped_data["confidence"] = data.get("confidence", 1.0)
@@ -308,19 +309,21 @@ class IngestionEngine:
                 join_time = data.get("queue_join_ts")
                 if join_time:
                     join_uid = hashlib.md5(f"JOIN_{mapped_data['visitor_id']}_{join_time}".encode()).hexdigest()
-                    join_event = EventPayload(
-                        event_id=join_uid,
-                        store_id=mapped_data["store_id"],
-                        camera_id=mapped_data["camera_id"],
-                        visitor_id=mapped_data["visitor_id"],
-                        event_type="BILLING_QUEUE_JOIN",
-                        timestamp=datetime.fromisoformat(join_time),
-                        zone_id=mapped_data["zone_id"],
-                        dwell_ms=0,
-                        is_staff=mapped_data["is_staff"],
-                        confidence=mapped_data["confidence"],
-                        metadata={"queue_position_at_join": data.get("queue_position_at_join")}
-                    )
+                    join_args = {
+                        "event_id": join_uid,
+                        "store_id": mapped_data["store_id"],
+                        "camera_id": mapped_data["camera_id"],
+                        "visitor_id": mapped_data["visitor_id"],
+                        "event_type": "BILLING_QUEUE_JOIN",
+                        "timestamp": datetime.fromisoformat(join_time),
+                        "zone_id": mapped_data["zone_id"],
+                        "dwell_ms": 0,
+                        "confidence": mapped_data["confidence"],
+                        "metadata": {"queue_position_at_join": data.get("queue_position_at_join")}
+                    }
+                    if "is_staff" in mapped_data:
+                        join_args["is_staff"] = mapped_data["is_staff"]
+                    join_event = EventPayload(**join_args)
                     self.ingest(join_event)
 
             event = EventPayload(**mapped_data)

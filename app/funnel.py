@@ -20,10 +20,14 @@ class FunnelEngine:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Check date presence in events
+        # Check date presence in events and transactions
         cursor.execute("SELECT COUNT(*) FROM events WHERE store_id = ? AND date(timestamp) = ?", (store_id, date))
         event_count = cursor.fetchone()[0]
-        use_fallback = (event_count == 0)
+
+        cursor.execute("SELECT COUNT(*) FROM transactions WHERE store_id = ? AND date(order_timestamp) = ?", (store_id, date))
+        tx_count = cursor.fetchone()[0]
+
+        use_fallback = (event_count == 0 or tx_count == 0)
 
         # Base filters
         if use_fallback:
